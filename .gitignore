@@ -1,0 +1,25 @@
+# Environment
+.env
+.venv/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Data files
+spidy_notes.json
+spidy_reminders.json
+
+# Audio files
+*.wav
+*.webm
+*.mp3
+*.png
+
+# FFmpeg (large folder)
+ffmpeg-master-latest-win64-gpl-shared/
+
+# Whisper models (auto-download)
+*.pt

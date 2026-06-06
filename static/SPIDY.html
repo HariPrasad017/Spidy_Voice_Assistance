@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>S.P.I.D.Y v4.0 — Spider-Man AI Assistant</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --red:#cc0000;--red-dark:#8b0000;--red-light:#ff4444;
+  --blue:#0057a8;--blue-light:#1a7fd4;
+  --bg:#0a0a0f;--surface:#111118;--surface2:#1a1a24;
+  --text:#f0f0f0;--muted:#777;
+  --glow-red:0 0 24px rgba(204,0,0,0.5);
+  --glow-blue:0 0 24px rgba(0,87,168,0.5);
+}
+body{background:var(--bg);color:var(--text);font-family:'Courier New',monospace;min-height:100vh;display:flex;flex-direction:column;align-items:center;overflow-x:hidden}
+#webCanvas{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;opacity:0.1;pointer-events:none}
+
+/* BOOT */
+#bootScreen{position:fixed;inset:0;z-index:100;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;transition:opacity 0.8s}
+.boot-logo{width:90px;height:90px;border-radius:50%;background:var(--red);color:#fff;font-size:40px;font-weight:900;display:flex;align-items:center;justify-content:center;border:3px solid rgba(255,255,255,0.8);box-shadow:var(--glow-red);animation:pulse 1.5s infinite}
+.boot-title{font-size:34px;font-weight:900;color:var(--red);letter-spacing:10px;text-shadow:var(--glow-red)}
+.boot-sub{font-size:11px;color:var(--muted);letter-spacing:2px;text-align:center;max-width:380px}
+.boot-bar{width:320px;height:4px;background:var(--surface2);border-radius:2px;overflow:hidden;margin-top:8px}
+.boot-fill{height:100%;width:0%;background:linear-gradient(90deg,var(--red),var(--blue-light));transition:width 0.4s ease}
+.boot-status{font-size:12px;color:var(--blue-light);letter-spacing:1px;min-height:20px}
+
+/* MAIN */
+#mainUI{position:relative;z-index:10;width:100%;max-width:720px;padding:0 16px 60px;display:flex;flex-direction:column;gap:16px}
+#mainUI.hidden{display:none}
+
+/* MOBILE RESPONSIVE */
+@media(max-width:600px){
+  #mainUI{padding:0 10px 80px;gap:12px}
+  .hdr-title{font-size:16px;letter-spacing:3px}
+  .hdr-sub{font-size:9px}
+  .badge{display:none}
+  .orb-wrap{width:150px;height:150px}
+  .orb{width:90px;height:90px}
+  .r1{width:110px;height:110px}
+  .r2{width:130px;height:130px}
+  .r3{width:150px;height:150px}
+  .orb-icon{font-size:28px}
+  .orb-state{font-size:8px}
+  .orb-lbl{font-size:9px;bottom:-22px}
+  .status-bar{gap:6px}
+  .sb-item{padding:6px 8px;min-width:70px}
+  .sb-label{font-size:8px}
+  .sb-val{font-size:11px}
+  .panels-row{flex-direction:column}
+  .chat-box{min-height:140px;max-height:220px;padding:10px}
+  .msg-text{font-size:12px;padding:7px 10px}
+  #ti{font-size:12px;padding:10px 14px}
+  .mic-btn,.send-btn{width:44px;height:44px}
+  .quick{gap:5px}
+  .qb{font-size:10px;padding:5px 10px}
+  .qsec-title{font-size:9px}
+  .wave-box{padding:6px 10px}
+  #waveCanvas{height:40px}
+  .info-bar{font-size:10px}
+  .code-block pre{font-size:11px;padding:8px}
+  .wake-toggle{font-size:10px;padding:4px 8px}
+  .logo-c{width:38px;height:38px;font-size:18px}
+}
+
+/* HEADER */
+header{display:flex;align-items:center;justify-content:space-between;padding:18px 0 0;flex-wrap:wrap;gap:8px}
+.hdr-left{display:flex;align-items:center;gap:12px}
+.logo-c{width:46px;height:46px;border-radius:50%;background:var(--red);color:#fff;font-size:22px;font-weight:900;display:flex;align-items:center;justify-content:center;border:2px solid rgba(255,255,255,0.2);box-shadow:var(--glow-red)}
+.hdr-title{font-size:20px;font-weight:900;color:var(--red);letter-spacing:5px}
+.hdr-sub{font-size:10px;color:var(--muted);letter-spacing:1px}
+.hdr-right{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.badge{font-size:10px;padding:3px 10px;border-radius:20px;letter-spacing:1px}
+.badge-ai{background:rgba(0,87,168,0.2);border:1px solid rgba(0,87,168,0.4);color:var(--blue-light)}
+.badge-v4{background:rgba(204,0,0,0.15);border:1px solid rgba(204,0,0,0.4);color:var(--red-light)}
+.stat{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted)}
+.dot{width:9px;height:9px;border-radius:50%;background:#22c55e;box-shadow:0 0 8px #22c55e;animation:blink 2s infinite}
+.wake-toggle{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--muted);cursor:pointer;padding:5px 12px;border-radius:20px;border:1px solid rgba(204,0,0,0.25);transition:all 0.2s;user-select:none}
+.wake-toggle.on{background:rgba(204,0,0,0.15);border-color:var(--red);color:var(--red-light)}
+.wake-dot{width:8px;height:8px;border-radius:50%;background:var(--muted);transition:all 0.2s}
+.wake-toggle.on .wake-dot{background:#22c55e;box-shadow:0 0 6px #22c55e;animation:blink 1s infinite}
+
+/* ORB */
+.orb-wrap{position:relative;width:180px;height:180px;margin:0 auto;display:flex;align-items:center;justify-content:center}
+.ring{position:absolute;border-radius:50%;border:1px solid}
+.r1{width:138px;height:138px;border-color:rgba(204,0,0,0.3);animation:spin 6s linear infinite}
+.r2{width:160px;height:160px;border-color:rgba(0,87,168,0.2);animation:spin 11s linear infinite reverse}
+.r3{width:180px;height:180px;border-color:rgba(204,0,0,0.1);animation:spin 18s linear infinite}
+.orb{width:105px;height:105px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#cc2200,#8b0000 60%,#1a0000);border:2px solid rgba(255,100,100,0.3);display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;box-shadow:var(--glow-red),inset 0 0 20px rgba(0,0,0,0.5);z-index:2;transition:transform 0.2s;gap:2px}
+.orb:hover{transform:scale(1.05)}
+.orb.listening{animation:orbpulse 0.7s infinite}
+.orb.speaking{animation:orbspeak 0.5s infinite}
+.orb.thinking{animation:orbwait 1.5s infinite}
+.orb-icon{font-size:34px;line-height:1}
+.orb-state{font-size:9px;color:rgba(255,255,255,0.6);letter-spacing:1px}
+.orb-lbl{position:absolute;bottom:-26px;font-size:10px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;text-align:center;min-width:160px}
+
+/* WAVE */
+.wave-box{background:var(--surface);border:1px solid rgba(204,0,0,0.12);border-radius:12px;padding:8px 14px;overflow:hidden;position:relative}
+.wave-lbl{position:absolute;top:6px;right:10px;font-size:9px;color:var(--muted);letter-spacing:1px}
+#waveCanvas{width:100%;height:50px;display:block}
+
+/* STATUS BAR */
+.status-bar{display:flex;gap:8px;flex-wrap:wrap}
+.sb-item{background:var(--surface);border:1px solid rgba(204,0,0,0.1);border-radius:8px;padding:7px 12px;flex:1;min-width:80px}
+.sb-label{font-size:9px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:2px}
+.sb-val{font-size:12px;color:var(--text);font-weight:500}
+
+/* INFO BAR */
+.info-bar{text-align:center;font-size:11px;color:var(--muted);padding:2px;letter-spacing:0.5px}
+.info-bar span{color:var(--blue-light)}
+
+/* PANELS ROW */
+.panels-row{display:flex;gap:10px}
+.panel{background:var(--surface);border:1px solid rgba(204,0,0,0.12);border-radius:10px;padding:10px 12px;flex:1;min-width:0}
+.panel-title{font-size:10px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between}
+.panel-clear{font-size:10px;color:var(--muted);cursor:pointer;padding:2px 6px;border-radius:4px;border:1px solid rgba(204,0,0,0.2)}
+.panel-clear:hover{color:var(--red-light);border-color:var(--red)}
+.panel-list{display:flex;flex-direction:column;gap:5px;max-height:100px;overflow-y:auto}
+.panel-item{font-size:11px;color:var(--text);background:var(--surface2);padding:5px 8px;border-radius:6px;border-left:2px solid var(--red);line-height:1.4}
+.panel-empty{font-size:11px;color:var(--muted);font-style:italic}
+
+/* CHAT */
+.chat-box{background:var(--surface);border:1px solid rgba(204,0,0,0.12);border-radius:12px;padding:14px;min-height:160px;max-height:260px;overflow-y:auto;display:flex;flex-direction:column;gap:10px;scroll-behavior:smooth}
+.chat-box::-webkit-scrollbar{width:3px}
+.chat-box::-webkit-scrollbar-thumb{background:var(--red-dark);border-radius:2px}
+.msg{display:flex;flex-direction:column;gap:3px;animation:fadeUp 0.3s ease}
+.msg-who{font-size:9px;letter-spacing:2px;color:var(--muted)}
+.s-msg .msg-who{color:var(--red-light)}
+.u-msg{align-items:flex-end}
+.u-msg .msg-who{color:var(--blue-light)}
+.msg-text{font-size:13px;line-height:1.65;color:var(--text);background:var(--surface2);padding:9px 13px;border-radius:10px;max-width:92%}
+.s-msg .msg-text{border-left:2px solid var(--red);border-radius:0 10px 10px 0}
+.u-msg .msg-text{border-right:2px solid var(--blue-light);border-radius:10px 0 0 10px;background:rgba(0,87,168,0.12)}
+.tdots span{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--red);margin:0 2px;animation:bounce 1s infinite}
+.tdots span:nth-child(2){animation-delay:.15s}
+.tdots span:nth-child(3){animation-delay:.3s}
+
+/* INPUT */
+.inp-row{display:flex;gap:10px;align-items:center}
+.mic-btn{width:50px;height:50px;border-radius:50%;background:var(--red);border:none;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:var(--glow-red);transition:all 0.2s;position:relative;overflow:visible}
+.mic-btn:hover{background:var(--red-light);transform:scale(1.05)}
+.mic-btn.active{background:#ff0000}
+.mic-btn.active::after{content:'';position:absolute;inset:-6px;border-radius:50%;border:2px solid rgba(255,0,0,0.5);animation:ringpulse 1s infinite}
+#ti{flex:1;background:var(--surface);border:1px solid rgba(204,0,0,0.2);border-radius:24px;padding:12px 18px;color:var(--text);font-family:'Courier New',monospace;font-size:13px;outline:none;transition:border-color 0.2s}
+#ti:focus{border-color:rgba(204,0,0,0.5)}
+#ti::placeholder{color:var(--muted)}
+.send-btn{width:50px;height:50px;border-radius:50%;background:var(--blue);border:none;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:var(--glow-blue);transition:all 0.2s}
+.send-btn:hover{background:var(--blue-light);transform:scale(1.05)}
+
+/* WHISPER BUTTON */
+.whisper-btn{width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,#6b21a8,#9333ea);border:none;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 0 16px rgba(107,33,168,0.5);transition:all 0.2s}
+.whisper-btn:hover{background:linear-gradient(135deg,#7c3aed,#a855f7);transform:scale(1.05)}
+.whisper-btn.active{animation:orbpulse 0.6s infinite;background:linear-gradient(135deg,#9333ea,#c026d3)}
+
+/* QUICK COMMANDS */
+.qsec-title{font-size:10px;color:var(--muted);letter-spacing:2px}
+.quick{display:flex;flex-wrap:wrap;gap:6px}
+.qb{background:var(--surface2);border:1px solid rgba(204,0,0,0.18);color:var(--muted);font-family:'Courier New',monospace;font-size:10px;padding:6px 12px;border-radius:20px;cursor:pointer;transition:all 0.2s}
+.qb:hover{background:rgba(204,0,0,0.12);color:var(--text);border-color:var(--red)}
+.qb:active{transform:scale(0.96)}
+.qb.sys{border-color:rgba(0,87,168,0.3);color:rgba(26,127,212,0.8)}
+.qb.sys:hover{background:rgba(0,87,168,0.12);border-color:var(--blue-light);color:var(--blue-light)}
+
+@keyframes pulse{0%,100%{box-shadow:0 0 20px rgba(204,0,0,0.4)}50%{box-shadow:0 0 50px rgba(204,0,0,0.9)}}
+@keyframes orbpulse{0%,100%{box-shadow:var(--glow-red),inset 0 0 20px rgba(0,0,0,0.5);transform:scale(1)}50%{box-shadow:0 0 50px rgba(204,0,0,0.9),inset 0 0 20px rgba(0,0,0,0.5);transform:scale(1.07)}}
+@keyframes orbspeak{0%,100%{box-shadow:0 0 20px rgba(0,87,168,0.5)}50%{box-shadow:0 0 50px rgba(0,87,168,0.9)}}
+@keyframes orbwait{0%,100%{box-shadow:0 0 16px rgba(204,0,0,0.3)}50%{box-shadow:0 0 40px rgba(204,0,0,0.7)}}
+@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0.3}}
+@keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+@keyframes ringpulse{0%{transform:scale(1);opacity:0.8}100%{transform:scale(1.6);opacity:0}}
+
+/* CODE BLOCKS */
+.code-block{background:#0d1117;border:1px solid rgba(204,0,0,0.3);border-radius:8px;overflow:hidden;margin:6px 0;max-width:100%}
+.code-header{display:flex;align-items:center;justify-content:space-between;padding:6px 12px;background:#161b22;border-bottom:1px solid rgba(204,0,0,0.2)}
+.code-lang{font-size:10px;color:var(--blue-light);letter-spacing:1px;text-transform:uppercase}
+.copy-btn{font-size:10px;padding:3px 10px;border-radius:4px;background:rgba(204,0,0,0.2);border:1px solid rgba(204,0,0,0.4);color:var(--red-light);cursor:pointer;transition:all 0.2s;font-family:'Courier New',monospace}
+.copy-btn:hover{background:rgba(204,0,0,0.4);color:#fff}
+.code-block pre{margin:0;padding:12px;overflow-x:auto;font-size:12px;line-height:1.6}
+.code-block pre code{color:#e6edf3;font-family:'Courier New',monospace;white-space:pre}
+.inline-code{background:#1a1a2e;color:#ff6b6b;padding:2px 6px;border-radius:4px;font-size:12px;font-family:'Courier New',monospace}
+</style>
+</head>
+<body>
+<canvas id="webCanvas"></canvas>
+
+<!-- BOOT -->
+<div id="bootScreen">
+  <div class="boot-logo">S</div>
+  <div class="boot-title">S.P.I.D.Y</div>
+  <div class="boot-sub">Spider-Man Personal Intelligence Digital Yield-system v4.0 — System Commands Active</div>
+  <div class="boot-bar"><div class="boot-fill" id="bf"></div></div>
+  <div class="boot-status" id="bs">Initializing systems...</div>
+</div>
+
+<!-- MAIN -->
+<div id="mainUI" class="hidden">
+
+  <header>
+    <div class="hdr-left">
+      <div class="logo-c">S</div>
+      <div>
+        <div class="hdr-title">S.P.I.D.Y</div>
+        <div class="hdr-sub">Spider-Man AI Assistant v4.0</div>
+      </div>
+    </div>
+    <div class="hdr-right">
+      <span class="badge badge-v4">v4.0</span>
+      <span class="badge badge-ai">GROQ AI</span>
+      <div class="wake-toggle" id="wakeToggle" onclick="toggleWake()">
+        <div class="wake-dot"></div>
+        <span id="wakeLabel">Wake: OFF</span>
+      </div>
+      <div class="stat"><span class="dot"></span><span>Online</span></div>
+    </div>
+  </header>
+
+  <!-- ORB -->
+  <div class="orb-wrap">
+    <div class="ring r3"></div>
+    <div class="ring r2"></div>
+    <div class="ring r1"></div>
+    <div class="orb" id="orb" onclick="orbClick()">
+      <div class="orb-icon">🕷️</div>
+      <div class="orb-state" id="orbState">READY</div>
+    </div>
+    <div class="orb-lbl" id="ol">Click mic or orb to talk</div>
+  </div>
+
+  <!-- WAVE -->
+  <div class="wave-box">
+    <span class="wave-lbl" id="waveLbl">IDLE</span>
+    <canvas id="waveCanvas" width="600" height="50"></canvas>
+  </div>
+
+  <!-- INFO + STATUS -->
+  <div class="info-bar" id="infoBar">Status: <span>Ready — System Commands Active</span></div>
+  <div class="status-bar">
+    <div class="sb-item"><span class="sb-label">Time</span><span class="sb-val" id="sbTime">--:--</span></div>
+    <div class="sb-item"><span class="sb-label">Date</span><span class="sb-val" id="sbDate">---</span></div>
+    <div class="sb-item"><span class="sb-label">Status</span><span class="sb-val" id="sbStatus">Standby</span></div>
+    <div class="sb-item"><span class="sb-label">Commands</span><span class="sb-val" id="sbCmds">0</span></div>
+  </div>
+
+  <!-- NOTES + REMINDERS PANELS -->
+  <div class="panels-row">
+    <div class="panel">
+      <div class="panel-title">
+        NOTES
+        <span class="panel-clear" onclick="sendQ('clear notes')">Clear</span>
+      </div>
+      <div class="panel-list" id="notesList">
+        <span class="panel-empty">No notes yet. Say "note [text]"</span>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-title">REMINDERS</div>
+      <div class="panel-list" id="remindersList">
+        <span class="panel-empty">No reminders. Say "remind me..."</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- CHAT -->
+  <div class="chat-box" id="cb">
+    <div class="msg s-msg">
+      <span class="msg-who">S.P.I.D.Y v4.0</span>
+      <span class="msg-text">Phase 4 online! System commands active. I can now open apps, take screenshots, control volume, save notes, set reminders, and more! Try "open notepad" or "take screenshot"! 🕷️</span>
+    </div>
+  </div>
+
+  <!-- INPUT -->
+  <div class="inp-row">
+    <button class="mic-btn" id="mb" onclick="toggleMic()" title="Browser Mic">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="9" y="2" width="6" height="11" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="8" y1="22" x2="16" y2="22"/></svg>
+    </button>
+    <input type="text" id="ti" placeholder='Ask anything or give a command...' autocomplete="off" onkeydown="if(event.key===&apos;Enter&apos;)send()"/>
+    <button class="whisper-btn" id="wb" onclick="toggleWhisper()" title="Whisper ASR (More Accurate)">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/><circle cx="12" cy="22" r="1" fill="currentColor"/></svg>
+    </button>
+    <button class="send-btn" onclick="send()">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+    </button>
+  </div>
+
+  <!-- QUICK COMMANDS -->
+  <div class="qsec-title">AI COMMANDS</div>
+  <div class="quick">
+    <button class="qb" onclick="sendQ('Good morning SPIDY')">Good Morning</button>
+    <button class="qb" onclick="sendQ('Tell me a Spider-Man quote')">Spidey Quote</button>
+    <button class="qb" onclick="sendQ('Tell me a joke')">Joke</button>
+    <button class="qb" onclick="sendQ('Marvel trivia')">Marvel Trivia</button>
+    <button class="qb" onclick="sendQ('Who is Iron Man')">Iron Man</button>
+    <button class="qb" onclick="sendQ('What can you do')">Help</button>
+  </div>
+
+  <div class="qsec-title" style="margin-top:4px">SYSTEM COMMANDS</div>
+  <div class="quick">
+    <button class="qb sys" onclick="sendQ('open chrome')">Open Chrome</button>
+    <button class="qb sys" onclick="sendQ('open notepad')">Notepad</button>
+    <button class="qb sys" onclick="sendQ('open calculator')">Calculator</button>
+    <button class="qb sys" onclick="sendQ('open vs code')">VS Code</button>
+    <button class="qb sys" onclick="sendQ('take screenshot')">Screenshot</button>
+    <button class="qb sys" onclick="sendQ('increase volume')">Vol Up</button>
+    <button class="qb sys" onclick="sendQ('decrease volume')">Vol Down</button>
+    <button class="qb sys" onclick="sendQ('mute volume')">Mute</button>
+    <button class="qb sys" onclick="sendQ('show notes')">My Notes</button>
+    <button class="qb sys" onclick="sendQ('show reminders')">Reminders</button>
+    <button class="qb sys" onclick="sendQ('lock computer')">Lock PC</button>
+    <button class="qb sys" onclick="sendQ('open youtube')">YouTube</button>
+  </div>
+
+</div>
+
+<script>
+// ===== WEB CANVAS =====
+var wc=document.getElementById('webCanvas'),wx=wc.getContext('2d');
+function rsz(){wc.width=window.innerWidth;wc.height=window.innerHeight;drawWeb();}
+function drawWeb(){
+  wx.clearRect(0,0,wc.width,wc.height);
+  var cx=wc.width/2,cy=wc.height/2,mx=Math.max(wc.width,wc.height);
+  wx.strokeStyle='rgba(204,0,0,0.4)';wx.lineWidth=0.5;
+  for(var i=0;i<18;i++){var a=(i/18)*Math.PI*2;wx.beginPath();wx.moveTo(cx,cy);wx.lineTo(cx+Math.cos(a)*mx,cy+Math.sin(a)*mx);wx.stroke();}
+  for(var r=1;r<=12;r++){var rd=(r/12)*mx*0.75;wx.beginPath();for(var j=0;j<=18;j++){var a2=(j/18)*Math.PI*2;j===0?wx.moveTo(cx+Math.cos(a2)*rd,cy+Math.sin(a2)*rd):wx.lineTo(cx+Math.cos(a2)*rd,cy+Math.sin(a2)*rd);}wx.closePath();wx.stroke();}
+}
+rsz();window.addEventListener('resize',rsz);
+
+// ===== BOOT =====
+var bMsgs=['Initializing S.P.I.D.Y core...','Loading Spider-Man protocols...','Connecting Groq AI Brain...','Activating system commands...','Loading notes and reminders...','Phase 4 fully online!'];
+var bStep=0;
+function boot(){
+  if(bStep>=bMsgs.length){
+    setTimeout(function(){
+      document.getElementById('bootScreen').style.opacity='0';
+      setTimeout(function(){
+        document.getElementById('bootScreen').style.display='none';
+        document.getElementById('mainUI').classList.remove('hidden');
+        startWave();startClock();loadPanels();
+        setTimeout(function(){speak('S.P.I.D.Y Phase 4 online. System commands are now active. I can open apps, take screenshots, save notes, and more!');},500);
+      },800);
+    },300);return;
+  }
+  document.getElementById('bs').textContent=bMsgs[bStep];
+  document.getElementById('bf').style.width=((bStep+1)/bMsgs.length*100)+'%';
+  bStep++;setTimeout(boot,500);
+}
+setTimeout(boot,400);
+
+// ===== CLOCK =====
+function startClock(){
+  function tick(){
+    var n=new Date();
+    document.getElementById('sbTime').textContent=n.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+    document.getElementById('sbDate').textContent=n.toLocaleDateString('en-IN',{day:'numeric',month:'short'});
+  }
+  tick();setInterval(tick,1000);
+}
+
+// ===== WAVEFORM =====
+var wv=document.getElementById('waveCanvas'),wx2=wv.getContext('2d'),wAmp=3,wClr='rgba(204,0,0,0.55)';
+function drawWave(){
+  var w=wv.parentElement.offsetWidth-28||600,h=50;wv.width=w;
+  wx2.clearRect(0,0,w,h);
+  var t=Date.now()/1000;
+  wx2.beginPath();wx2.strokeStyle=wClr;wx2.lineWidth=2;
+  for(var x=0;x<w;x++){
+    var y=h/2+Math.sin(x*0.04+t*2)*wAmp+Math.sin(x*0.015+t*1.3)*wAmp*0.6+Math.sin(x*0.008+t*0.8)*wAmp*0.3;
+    x===0?wx2.moveTo(x,y):wx2.lineTo(x,y);
+  }
+  wx2.stroke();requestAnimationFrame(drawWave);
+}
+function startWave(){drawWave();}
+function setWave(a,c){wAmp=a;wClr=c||'rgba(204,0,0,0.55)';}
+
+// ===== STATE =====
+var cmdCount=0;
+function setState(s){
+  var orb=document.getElementById('orb');
+  var os=document.getElementById('orbState');
+  var ol=document.getElementById('ol');
+  var wl=document.getElementById('waveLbl');
+  var ss=document.getElementById('sbStatus');
+  var info=document.getElementById('infoBar');
+  orb.className='orb';
+  if(s==='listening'){
+    orb.classList.add('listening');os.textContent='LISTENING';ol.textContent='Listening...';
+    wl.textContent='VOICE INPUT';setWave(28,'rgba(220,0,0,0.85)');ss.textContent='Listening';
+    info.innerHTML='Status: <span style="color:#ff4444">Listening...</span>';
+  } else if(s==='thinking'){
+    orb.classList.add('thinking');os.textContent='THINKING';ol.textContent='Processing...';
+    wl.textContent='AI PROCESSING';setWave(14,'rgba(0,87,168,0.65)');ss.textContent='Thinking';
+    info.innerHTML='Status: <span style="color:#1a7fd4">Processing...</span>';
+  } else if(s==='speaking'){
+    orb.classList.add('speaking');os.textContent='SPEAKING';ol.textContent='Speaking...';
+    wl.textContent='VOICE OUTPUT';setWave(20,'rgba(26,127,212,0.7)');ss.textContent='Speaking';
+    info.innerHTML='Status: <span style="color:#1a7fd4">Speaking...</span>';
+  } else {
+    os.textContent='READY';ol.textContent='Click mic or orb to talk';
+    wl.textContent='IDLE';setWave(3,'rgba(204,0,0,0.55)');ss.textContent='Standby';
+    info.innerHTML='Status: <span>Ready — System Commands Active</span>';
+  }
+}
+
+// ===== PANELS =====
+function loadPanels(){
+  fetch('/api/notes').then(function(r){return r.json();}).then(function(notes){
+    var el=document.getElementById('notesList');
+    if(!notes||notes.length===0){el.innerHTML='<span class="panel-empty">No notes yet. Say "note [text]"</span>';return;}
+    el.innerHTML=notes.slice(-4).map(function(n){return '<div class="panel-item">'+n.text+'</div>';}).join('');
+  }).catch(function(){});
+  fetch('/api/reminders').then(function(r){return r.json();}).then(function(rems){
+    var el=document.getElementById('remindersList');
+    if(!rems||rems.length===0){el.innerHTML='<span class="panel-empty">No reminders. Say "remind me..."</span>';return;}
+    el.innerHTML=rems.map(function(r){return '<div class="panel-item">'+r.text+' — '+r.time+'</div>';}).join('');
+  }).catch(function(){});
+}
+
+// ===== CHAT =====
+var cb=document.getElementById('cb');
+
+function formatMsg(txt){
+  // Fix common Groq formatting issues — "pythonCopy" prefix remove
+  txt = txt.replace(/```(\w+)\s*Copy\s*/gi, '```$1\n');
+  txt = txt.replace(/(\w+)Copy\s*\n/g, '```$1\n');
+
+  // Render ```lang code``` blocks
+  txt = txt.replace(/```(\w+)?\n?([\s\S]*?)```/g, function(match, lang, code){
+    var id='code_'+Date.now()+'_'+Math.random().toString(36).substr(2,5);
+    var langLabel=lang||'code';
+    var escaped=code.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    return '<div class="code-block"><div class="code-header"><span class="code-lang">'+langLabel+'</span><button class="copy-btn" onclick="copyCode(\''+id+'\')">Copy</button></div><pre id="'+id+'"><code>'+escaped+'</code></pre></div>';
+  });
+
+  // Handle inline code without backticks — detect language keywords
+  txt = txt.replace(/\b(Python Code|Java Code|C\+\+ Code|SQL Code|JavaScript Code)\s*[\(\)a-zA-Z\s]*\n/gi, function(match){
+    return '<span style="color:var(--blue-light);font-size:11px;letter-spacing:1px">'+match.trim()+'</span><br>';
+  });
+
+  // Render `inline code`
+  txt = txt.replace(/`([^`\n]+)`/g,'<code class="inline-code">$1</code>');
+
+  // Render **bold**
+  txt = txt.replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>');
+
+  // Render bullet points
+  txt = txt.replace(/^[-•]\s(.+)/gm,'<div style="padding-left:12px;margin:2px 0">• $1</div>');
+
+  // Render newlines
+  txt = txt.replace(/\n/g,'<br>');
+
+  return txt;
+}
+
+function copyCode(id){
+  var el = document.getElementById(id);
+  if(el){
+    var text = el.innerText;
+    navigator.clipboard.writeText(text).then(function(){
+      var btn = el.parentElement.querySelector('.copy-btn');
+      if(btn){btn.textContent='Copied!';setTimeout(function(){btn.textContent='Copy';},2000);}
+    });
+  }
+}
+
+function addMsg(who,txt){
+  var d=document.createElement('div');
+  d.className='msg '+(who==='SPIDY'?'s-msg':'u-msg');
+  var formatted = who==='SPIDY' ? formatMsg(txt) : txt.replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  d.innerHTML='<span class="msg-who">'+(who==='SPIDY'?'S.P.I.D.Y':'YOU')+'</span><div class="msg-text">'+formatted+'</div>';
+  cb.appendChild(d);cb.scrollTop=cb.scrollHeight;
+}
+function showTyping(){
+  var d=document.createElement('div');d.className='msg s-msg';d.id='td';
+  d.innerHTML='<span class="msg-who">S.P.I.D.Y</span><span class="msg-text tdots"><span></span><span></span><span></span></span>';
+  cb.appendChild(d);cb.scrollTop=cb.scrollHeight;
+}
+function hideTyping(){var t=document.getElementById('td');if(t)t.remove();}
+
+// ===== SEND =====
+async function handleSend(txt){
+  if(!txt.trim())return;
+  addMsg('YOU',txt);
+  if(document.getElementById('ti').value===txt)document.getElementById('ti').value='';
+  cmdCount++;document.getElementById('sbCmds').textContent=cmdCount;
+  setState('thinking');showTyping();
+
+  try{
+    var res=await fetch('/api/chat',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({message:txt})
+    });
+    var data=await res.json();
+    hideTyping();
+    var reply=data.reply||'Spider-sense malfunction!';
+    addMsg('SPIDY',reply);
+
+    // Handle URL actions from backend
+    if(data.action==='open_url'&&data.url){
+      window.open(data.url,'_blank');
+    }
+
+    // Refresh panels after notes/reminders commands
+    var tl=txt.toLowerCase();
+    if(tl.includes('note')||tl.includes('remind')){
+      setTimeout(loadPanels,500);
+    }
+
+    setState('speaking');
+    speak(reply,function(){setState('ready');});
+  } catch(e){
+    hideTyping();
+    addMsg('SPIDY','Web connection issue! Make sure Flask server is running.');
+    setState('ready');
+  }
+}
+function send(){handleSend(document.getElementById('ti').value);}
+function sendQ(t){handleSend(t);}
+function orbClick(){toggleMic();}
+
+// ===== MIC =====
+var recog=null,isListening=false,wakeActive=false;
+function toggleMic(){if(isListening){stopMic();}else{startMic();}}
+function startMic(){
+  if(!('webkitSpeechRecognition'in window||'SpeechRecognition'in window)){
+    addMsg('SPIDY','Voice not supported. Use Chrome!');return;
+  }
+  if(isListening)return;
+  var SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  recog=new SR();recog.lang='en-US';recog.interimResults=false;recog.maxAlternatives=1;recog.continuous=false;
+  recog.onstart=function(){isListening=true;document.getElementById('mb').classList.add('active');setState('listening');};
+  recog.onresult=function(e){handleSend(e.results[0][0].transcript);};
+  recog.onerror=function(e){
+    isListening=false;document.getElementById('mb').classList.remove('active');setState('ready');
+    if(e.error==='not-allowed'){addMsg('SPIDY','Mic access denied! Allow microphone in Chrome settings.');}
+    if(wakeActive&&e.error!=='not-allowed'){setTimeout(startMic,1000);}
+  };
+  recog.onend=function(){
+    isListening=false;document.getElementById('mb').classList.remove('active');setState('ready');
+    if(wakeActive){setTimeout(startMic,800);}
+  };
+  try{recog.start();}catch(e){isListening=false;setState('ready');}
+}
+function stopMic(){
+  wakeActive=false;
+  document.getElementById('wakeToggle').classList.remove('on');
+  document.getElementById('wakeLabel').textContent='Wake: OFF';
+  isListening=false;
+  if(recog){try{recog.abort();}catch(e){}}
+  recog=null;
+  document.getElementById('mb').classList.remove('active');
+  setState('ready');
+}
+function toggleWake(){
+  wakeActive=!wakeActive;
+  var tog=document.getElementById('wakeToggle');
+  var lbl=document.getElementById('wakeLabel');
+  if(wakeActive){
+    tog.classList.add('on');lbl.textContent='Wake: ON';
+    addMsg('SPIDY','Wake mode ON! Continuously listening for your commands.');
+    if(!isListening)startMic();
+  } else {
+    tog.classList.remove('on');lbl.textContent='Wake: OFF';
+    if(isListening)stopMic();
+    addMsg('SPIDY','Wake mode OFF. Click mic to talk.');
+  }
+}
+
+// ===== WHISPER ASR =====
+var whisperRecorder = null;
+var whisperChunks = [];
+var isWhisperRecording = false;
+
+function toggleWhisper(){
+  if(isWhisperRecording){
+    stopWhisper();
+  } else {
+    startWhisper();
+  }
+}
+
+async function startWhisper(){
+  try{
+    var stream = await navigator.mediaDevices.getUserMedia({audio:true});
+    whisperChunks = [];
+    whisperRecorder = new MediaRecorder(stream);
+    whisperRecorder.ondataavailable = function(e){
+      if(e.data.size > 0) whisperChunks.push(e.data);
+    };
+    whisperRecorder.onstop = async function(){
+      var blob = new Blob(whisperChunks, {type:'audio/webm'});
+      await sendToWhisper(blob);
+      stream.getTracks().forEach(function(t){t.stop();});
+    };
+    whisperRecorder.start();
+    isWhisperRecording = true;
+    document.getElementById('wb').classList.add('active');
+    setState('listening');
+    document.getElementById('ol').textContent = 'Whisper recording... click to stop';
+    document.getElementById('infoBar').innerHTML = 'Status: <span style="color:#a855f7">Whisper ASR recording...</span>';
+  } catch(e){
+    addMsg('SPIDY', 'Mic access denied! Allow microphone permission.');
+  }
+}
+
+function stopWhisper(){
+  if(whisperRecorder && isWhisperRecording){
+    isWhisperRecording = false;
+    document.getElementById('wb').classList.remove('active');
+    setState('thinking');
+    document.getElementById('ol').textContent = 'Whisper transcribing...';
+    document.getElementById('infoBar').innerHTML = 'Status: <span style="color:#a855f7">Whisper AI transcribing... please wait</span>';
+    // Small delay to capture last audio chunk
+    setTimeout(function(){
+      whisperRecorder.stop();
+    }, 300);
+  }
+}
+
+async function sendToWhisper(blob){
+  try{
+    var formData = new FormData();
+    formData.append('audio', blob, 'recording.webm');
+    formData.append('language', 'auto');
+    var res = await fetch('/api/whisper/transcribe', {method:'POST', body:formData});
+    var data = await res.json();
+    if(data.text && data.text.trim()){
+      addMsg('SPIDY', '🎤 Whisper heard: "' + data.text + '"');
+      await handleSend(data.text);
+    } else {
+      addMsg('SPIDY', 'Whisper could not hear clearly. Try again!');
+      setState('ready');
+    }
+  } catch(e){
+    addMsg('SPIDY', 'Whisper error: ' + e.message);
+    setState('ready');
+  }
+}
+function speak(txt,callback){
+  if(!('speechSynthesis'in window)){if(callback)callback();return;}
+  window.speechSynthesis.cancel();
+  var u=new SpeechSynthesisUtterance(txt);
+  u.rate=1.05;u.pitch=0.88;u.volume=1;
+  var vs=window.speechSynthesis.getVoices();
+  var v=vs.find(function(x){return x.name==='Google US English';})||
+        vs.find(function(x){return x.name.includes('Google')&&x.lang==='en-US';})||
+        vs.find(function(x){return x.lang==='en-US';});
+  if(v)u.voice=v;
+  u.onend=function(){if(callback)callback();};
+  u.onerror=function(){if(callback)callback();};
+  window.speechSynthesis.speak(u);
+}
+window.speechSynthesis.onvoiceschanged=function(){};
+
+// Refresh panels every 30 seconds
+setInterval(loadPanels, 30000);
+</script>
+</body>
+</html>

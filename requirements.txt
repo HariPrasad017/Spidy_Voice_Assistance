@@ -1,0 +1,8 @@
+flask
+python-dotenv
+google-generativeai
+pyttsx3
+SpeechRecognition
+sounddevice numpy
+requests
+ 

@@ -1,3 +1,13 @@
+---
+title: SPIDY Voice Assistant
+emoji: 🕷️
+colorFrom: blue
+colorTo: purple
+sdk: docker
+app_port: 7860
+pinned: false
+---
+
 # S.P.I.D.Y — Smart Personal Intelligent Digital Assistant for You
 
 **Version: v6.2.1** | Voice-First AI Assistant | Python + Flask + Groq + Whisper

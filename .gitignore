@@ -1,0 +1,60 @@
+# Environment & Virtual Environments
+.env
+.venv/
+venv/
+ENV/
+env/
+
+# Python cache & compiled files
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyd
+*.so
+
+# Logs & Debugging
+*.log
+logs/
+
+# Local Data files
+spidy_notes.json
+spidy_reminders.json
+
+# Audio and Media files
+*.wav
+*.webm
+*.mp3
+*.ogg
+*.m4a
+*.raw
+*.png
+*.jpg
+*.jpeg
+
+# FFmpeg & Executables
+ffmpeg-master-latest-win64-gpl-shared/
+ffmpeg*/
+*.exe
+*.dll
+
+# Model caches & Weights
+*.pt
+*.bin
+*.safetensors
+.cache/
+models/
+
+# IDE & Editor files
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Operating System files
+Thumbs.db
+Desktop.ini
+.DS_Store
+# Local database
+*.db
+*.sqlite
+*.sqlite3

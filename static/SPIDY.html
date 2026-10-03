@@ -1,0 +1,143 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>S.P.I.D.Y v6 — JARVIS-Style AI Voice Assistant</title>
+  <link rel="stylesheet" href="style.css"/>
+</head>
+<body>
+  <!-- Canvas Web Background -->
+  <canvas id="webCanvas"></canvas>
+
+  <!-- Boot Screen -->
+  <div id="bootScreen">
+    <div class="boot-logo">S</div>
+    <div class="boot-title">S.P.I.D.Y</div>
+    <div class="boot-sub">Spider-Man Personal Intelligence Digital Yield-system v6.2.1</div>
+    <div class="boot-bar"><div class="boot-fill" id="bf"></div></div>
+    <div class="boot-status" id="bs">Initializing systems...</div>
+  </div>
+
+  <!-- Main UI -->
+  <div id="mainUI" class="hidden">
+    <!-- Header -->
+    <header>
+      <div class="hdr-left">
+        <div class="logo-c">S</div>
+        <div>
+          <div class="hdr-title">S.P.I.D.Y</div>
+          <div class="hdr-sub">Spidey AI Voice Assistant v6.2.1</div>
+        </div>
+      </div>
+      <div class="hdr-right">
+        <span class="badge badge-v4">v6</span>
+        <span class="badge badge-ai">GROQ AI</span>
+        <div class="wake-toggle" id="wakeToggle" onclick="toggleWake()" title="Toggle continuous voice wake listening">
+          <div class="wake-dot"></div>
+          <span id="wakeLabel">Wake: OFF</span>
+        </div>
+        <button class="qb sys" style="margin-left:8px;font-size:11px;padding:4px 10px" onclick="newConversation()" title="Start a fresh conversation (clears memory)">New Chat</button>
+        <div class="stat"><span class="dot"></span><span>Online</span></div>
+      </div>
+    </header>
+
+    <!-- Orb -->
+    <div class="orb-wrap">
+      <div class="ring r3"></div>
+      <div class="ring r2"></div>
+      <div class="ring r1"></div>
+      <div class="orb" id="orb" onclick="orbClick()" title="Click to start/stop Whisper voice recognition">
+        <div class="orb-icon">🕷️</div>
+        <div class="orb-state" id="orbState">READY</div>
+      </div>
+      <div class="orb-lbl" id="ol">Click mic or orb to talk</div>
+    </div>
+
+    <!-- Waveform Visualizer -->
+    <div class="wave-box">
+      <span class="wave-lbl" id="waveLbl">IDLE</span>
+      <canvas id="waveCanvas" width="600" height="50"></canvas>
+    </div>
+
+    <!-- Info & Status Bar -->
+    <div class="info-bar" id="infoBar">Status: <span>Ready — System Commands Active</span></div>
+    <div class="status-bar">
+      <div class="sb-item"><span class="sb-label">Time</span><span class="sb-val" id="sbTime">--:--</span></div>
+      <div class="sb-item"><span class="sb-label">Date</span><span class="sb-val" id="sbDate">---</span></div>
+      <div class="sb-item"><span class="sb-label">Status</span><span class="sb-val" id="sbStatus">Standby</span></div>
+      <div class="sb-item"><span class="sb-label">Commands</span><span class="sb-val" id="sbCmds">0</span></div>
+    </div>
+
+    <!-- Notes & Reminders Panels -->
+    <div class="panels-row">
+      <div class="panel">
+        <div class="panel-title">
+          NOTES
+          <span class="panel-clear" onclick="sendQ('clear notes')">Clear</span>
+        </div>
+        <div class="panel-list" id="notesList">
+          <span class="panel-empty">No notes yet. Say "note [text]"</span>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-title">REMINDERS</div>
+        <div class="panel-list" id="remindersList">
+          <span class="panel-empty">No reminders. Say "remind me..."</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Chat Box -->
+    <div class="chat-box" id="cb">
+      <div class="msg s-msg">
+        <span class="msg-who">S.P.I.D.Y v6.2.1</span>
+        <span class="msg-text">Hello! I'm Spidey — your JARVIS-style AI assistant (v6.2.1). I can understand context across our conversation, search the web for current information, and run tools on your system. Try asking "who is the CEO of Apple?", "open notepad", or just have a conversation! 🕷️</span>
+      </div>
+    </div>
+
+    <!-- Input Row -->
+    <div class="inp-row">
+      <button class="mic-btn" id="mb" onclick="toggleMic()" title="Browser Microphone (Web Speech API)">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="9" y="2" width="6" height="11" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="8" y1="22" x2="16" y2="22"/></svg>
+      </button>
+      <input type="text" id="ti" placeholder="Ask anything or give a command..." autocomplete="off" onkeydown="if(event.key==='Enter')send()"/>
+      <button class="whisper-btn" id="wb" onclick="toggleWhisper()" title="Whisper ASR (Accurate GPU Speech Recognition)">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/><circle cx="12" cy="22" r="1" fill="currentColor"/></svg>
+      </button>
+      <button class="send-btn" id="sendBtn" onclick="send()" title="Send Message">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+      </button>
+    </div>
+
+    <!-- Quick Commands -->
+    <div class="qsec-title">AI CONVERSATION</div>
+    <div class="quick">
+      <button class="qb" onclick="sendQ('Good morning SPIDY')">Good Morning</button>
+      <button class="qb" onclick="sendQ('Tell me a Spider-Man quote')">Spidey Quote</button>
+      <button class="qb" onclick="sendQ('Tell me a joke')">Joke</button>
+      <button class="qb" onclick="sendQ('What is machine learning?')">Machine Learning</button>
+      <button class="qb" onclick="sendQ('What can you do?')">Help</button>
+    </div>
+
+    <div class="qsec-title" style="margin-top:4px">DETERMINISTIC SYSTEM COMMANDS</div>
+    <div class="quick">
+      <button class="qb sys" onclick="sendQ('open chrome')">Open Chrome</button>
+      <button class="qb sys" onclick="sendQ('open notepad')">Notepad</button>
+      <button class="qb sys" onclick="sendQ('open calculator')">Calculator</button>
+      <button class="qb sys" onclick="sendQ('take a screenshot')">Screenshot</button>
+      <button class="qb sys" onclick="sendQ('increase volume')">Vol Up</button>
+      <button class="qb sys" onclick="sendQ('decrease volume')">Vol Down</button>
+      <button class="qb sys" onclick="sendQ('mute volume')">Mute</button>
+      <button class="qb sys" onclick="sendQ('show notes')">My Notes</button>
+      <button class="qb sys" onclick="sendQ('show reminders')">Reminders</button>
+      <button class="qb sys" onclick="sendQ('what time is it?')">Current Time</button>
+      <button class="qb sys" onclick="sendQ('open youtube')">YouTube</button>
+    </div>
+  </div>
+
+  <!-- Modular Frontend Core -->
+  <script src="app.js"></script>
+</body>
+</html>
+

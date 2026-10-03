@@ -7,6 +7,9 @@ import os
 import sys
 import time
 import datetime
+from zoneinfo import ZoneInfo
+
+IST = ZoneInfo("Asia/Kolkata")
 import threading
 import platform
 import subprocess
@@ -106,7 +109,7 @@ app.config['JSONIFY_MIMETYPE'] = 'application/json; charset=utf-8'
 def background_reminder_worker():
     while True:
         try:
-            now = datetime.datetime.now()
+            now = datetime.datetime.now(IST)
             reminders = load_json(REMINDERS_FILE)
             updated = False
             for r in reminders:
@@ -592,14 +595,14 @@ def chat():
                         return jsonify({'status': 'ok', 'reply': reply, 'intent': intent_lbl, 'confidence': conf, 'sources': [], 'resolved_query': user_msg, 'route': 'intent_execution'})
 
                     elif action == 'datetime':
-                        now = datetime.datetime.now()
+                        now = datetime.datetime.now(IST)
                         reply = f"It's {now.strftime('%I:%M %p')} on {now.strftime('%A, %B %d, %Y')}."
                         add_message(conv_id, "user", user_msg)
                         add_message(conv_id, "assistant", reply)
                         return jsonify({'status': 'ok', 'reply': reply, 'intent': intent_lbl, 'confidence': conf, 'sources': [], 'resolved_query': user_msg, 'route': 'intent_execution'})
 
                     elif action == 'greet':
-                        hour = datetime.datetime.now().hour
+                        hour = datetime.datetime.now(IST).hour
                         g = "Good morning" if hour < 12 else "Good afternoon" if hour < 17 else "Good evening"
                         reply = f"{g}! I'm Spidey, your personal AI assistant. How may I assist you?"
                         add_message(conv_id, "user", user_msg)
@@ -757,7 +760,7 @@ def notes_api():
         if not text:
             return jsonify({'status': 'error', 'message': 'Note text cannot be empty'}), 400
         notes = load_json(NOTES_FILE)
-        notes.append({'text': text, 'time': datetime.datetime.now().isoformat()})
+        notes.append({'text': text, 'time': datetime.datetime.now(IST).isoformat()})
         save_json(NOTES_FILE, notes)
         return jsonify({'status': 'ok', 'message': 'Note saved', 'notes': notes})
     elif request.method == 'DELETE':
